@@ -79,28 +79,10 @@ nextTurn board = do
   putStrLn $ (player ^. T.playerName) ++ "'s turn."
   showHand hand'
 
-  let money = getMoney hand'
-  let state = baseState {_money=money}
+  board' <- playActions board{_state=baseState}
+  buyPhase board'
 
-  actionPhase board{_state=state}
-
-actionPhase :: Board -> IO ()
-actionPhase board = do
-  let player = (board ^. players)!!0
-  let hand' = player ^. hand
-
-  -- if length actions > 0 then
-
-  -- else
-  playActions board
-  
-  let player' = drawCards (discardHand player) 5
-  -- let player' = player' {_deck=deck', _discard=(hand' ++ discard'), _hand=hand''}
-  let players' = replacePlayer player' (board ^. players)
-
-  buyPhase board{_players=players'}
-
-playActions :: Board -> IO ()
+playActions :: Board -> IO Board
 playActions board = do
   let player = (board ^. players)!!0
   let hand = player ^. T.hand
@@ -118,10 +100,15 @@ playActions board = do
         let players' = replacePlayer player{_hand=hand'} (board ^. T.players)
         board' <- playCard board{_players=players'} (fromJust card ^. effect)
         playActions board'
-      else putStrLn $ "Couldn't find the card."
-    else putStrLn $ "You have no actions left to use."
-  else
+      else do
+        putStrLn $ "Couldn't find the card."
+        return board
+    else do 
+      putStrLn $ "You have no actions left to use."
+      return board
+  else do
     putStrLn $ "There are no action cards you can use."
+    return board
   -- let effects = card ^. Cards.effect
   -- let states = map activateEffect effects
   -- sumStates states
@@ -132,7 +119,8 @@ buyPhase board = do
     displayGameResults (board ^. players)
   else do
     let player = (board ^. players)!!0
-    let state' = board ^. state
+    let state = board ^. T.state
+    let state' = state {_money=getMoney $ player ^. T.hand}
     if (state' ^. buys > 0) then do
       let buyList' = canBuy (board ^. buyList) (state' ^. T.money)
       putStrLn ("You can buy: " ++ (intercalate ", " (map show buyList')))
@@ -143,7 +131,8 @@ buyPhase board = do
       let boughtCard = buyCard buyRequest (board ^. buyList)
       if (boughtCard ^. T.cardName) == "Empty" then do
         putStrLn ("You decided not to use your buy.")
-        let players' = switchPlayer player (board ^. players)
+        let player' = drawCards (discardHand player) 5
+        let players' = switchPlayer player' (board ^. players)
         nextTurn board{_players=players'}
       else do
         putStrLn ("You have bought an " ++ (boughtCard ^. T.cardName))
@@ -159,7 +148,8 @@ buyPhase board = do
           buyPhase board {_players=players', _buyList = buyList', _state=state''}
     else do
       putStrLn ("You were not able to buy anything else.")
-      let players' = switchPlayer player (board ^. players)
+      let player' = drawCards (discardHand player) 5
+      let players' = switchPlayer player' (board ^. players)
       nextTurn board{_players=players'}
 
 displayGameResults :: [Player] -> IO()
