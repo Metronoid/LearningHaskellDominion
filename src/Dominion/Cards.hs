@@ -2,7 +2,7 @@
 module Dominion.Cards where
 
 import Control.Lens
-import Dominion.Types
+import Dominion.Types as T
 
 import Data.List
 
@@ -15,13 +15,7 @@ estate = Card {_cardName = "Estate", _cardType=Victory, _cost = 2, _effect = [VP
 duchy = Card {_cardName = "Duchy", _cardType=Victory, _cost = 5, _effect = [VPValue 3]}
 province = Card {_cardName = "Province", _cardType=Victory, _cost = 8, _effect = [VPValue 6]}
 
-cellar = Card {_cardName="Cellar", _cardType=Action, _cost = 2, _effect=[GainAction 1, CellarEffect]}
-
-instance Show Card where
-  show Card{..} = _cardName++" ("++show _cost++")"
-
-instance Eq Card where
-  x == y = x ^. cardName == y ^. cardName
+cellar = Card {_cardName="Cellar", _cardType=Action, _cost = 2, _effect=[CellarEffect]}
 
 findCardsByName :: String -> [Card] -> [Card]
 findCardsByName name' cards = filter (\x -> _cardName x == name') cards
@@ -57,6 +51,11 @@ lowerStock :: BuyableCard -> BuyableCard
 lowerStock card@BuyableCard{_stock} = card {_stock=_stock-1} 
 
 removeItem :: Card -> [Card] -> [Card]
-removeItem _ []                 = []
-removeItem x (y:ys) | x == y    = removeItem x ys
-                    | otherwise = y : removeItem x ys
+removeItem _ [] = []
+removeItem x (y:ys) | x == y = ys
+  | otherwise = y : removeItem x ys
+
+showHand :: [Card] -> IO ()
+showHand hand = do
+  let cards = map (\x -> T._cardName x) hand
+  putStrLn ("Hand: " ++ (intercalate " " cards))

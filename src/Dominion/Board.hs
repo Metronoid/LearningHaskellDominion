@@ -11,6 +11,7 @@ import Dominion.Types
 import Dominion.Cards as Cards
 import Dominion.State as State
 import Dominion.Player as Player
+import Dominion.Effects as Effects
 import Dominion.Types as T
 
 gen = mkStdGen 123
@@ -18,28 +19,8 @@ gen = mkStdGen 123
 canBuy :: [BuyableCard] -> Int -> [BuyableCard]
 canBuy cards money = concatMap (listBuy money) cards
 
-drawHand :: Player -> Int -> ([Card], [Card], [Card])
-drawHand player amm = do
-  let deck' = player ^. deck
-  if length deck' >= amm then do
-    let (hand, deck'') = splitFrom 0 (amm-1) deck'
-    (hand, deck'', player ^. discard)
-  else do
-    let discard' = player ^. discard
-    let (hand, deck'') = splitFrom 0 (amm - length deck' - 1) (shuffleDeck discard')
-    (deck' ++ hand, deck'', [])
-
-
-showHand :: [Card] -> IO ()
-showHand hand = do
-  let cards = map (\x -> T._cardName x) hand
-  putStrLn ("Hand: " ++ (intercalate " " cards))
-
 switchPlayer :: Player -> [Player] -> [Player]
 switchPlayer y (x:xs) = xs ++ [y]
-
-replacePlayer :: Player -> [Player] -> [Player]
-replacePlayer y (x:xs) = [y] ++ xs
 
 
 getMoney :: [Card] -> Int
@@ -53,10 +34,11 @@ getMoney hand = do
 getActions :: [Card] -> [Card]
 getActions hand = filter isAction hand
 
--- playCard :: Board -> Card -> Board
--- playCard board card = do
---   map (trigger board) (card ^. effect)
---   where trigger board effect = 
+playCard :: Board -> [CardEffect] -> IO (Board)
+playCard board (x:xs) = do
+  board' <- (activateCardEffect board x)
+  playCard board' xs
+playCard board [] = return board
 
 -- playAction :: [[CardEffect]] -> []
 
@@ -64,15 +46,10 @@ checkGameEnding :: Board -> Bool
 checkGameEnding board@Board{..} = do
   let province = (findBuyableCardsByName "Province" _buyList)!!0
   (province ^. T.stock) == 0
-  
-shuffleDeck :: [Card] -> [Card]
-shuffleDeck deck = shuffle' deck gen
 
 setupPlayer :: Player -> Player
 setupPlayer player = do
-  let player' = player {_deck = shuffleDeck (player ^. deck)}
-  let (hand', deck', discard') = drawHand player' 5
-  player{_deck=deck', _discard=discard', _hand=hand'}
+  drawCards player {_deck = shuffleDeck (player ^. deck)} 5
 
 setup = do
   let buyList' = [  BuyableCard {_card= copper, _stock = 10}, 
@@ -81,7 +58,8 @@ setup = do
               BuyableCard {_card= curse, _stock = 10},
               BuyableCard {_card= estate, _stock = 10},
               BuyableCard {_card= duchy, _stock = 10},
-              BuyableCard {_card= province, _stock = 10}]
+              BuyableCard {_card= province, _stock = 10},
+              BuyableCard {_card= cellar, _stock = 10}]
 
   let blue' = setupPlayer blue
   let red' = setupPlayer red
@@ -98,7 +76,7 @@ nextTurn board = do
 
   let player = (board ^. players)!!0
   let hand' = player ^. hand
-  putStrLn $ ((player ^. T.playerName) ++ "'s turn.")
+  putStrLn $ (player ^. T.playerName) ++ "'s turn."
   showHand hand'
 
   let money = getMoney hand'
@@ -110,33 +88,40 @@ actionPhase :: Board -> IO ()
 actionPhase board = do
   let player = (board ^. players)!!0
   let hand' = player ^. hand
-  let actions = getActions hand'
 
   -- if length actions > 0 then
 
   -- else
-  playActions board actions
+  playActions board
   
-  let (hand'', deck', discard') = drawHand player 5
-  let player' = player {_deck=deck', _discard=(hand' ++ discard'), _hand=hand''}
+  let player' = drawCards (discardHand player) 5
+  -- let player' = player' {_deck=deck', _discard=(hand' ++ discard'), _hand=hand''}
   let players' = replacePlayer player' (board ^. players)
 
   buyPhase board{_players=players'}
 
-playActions :: Board -> [Card] -> IO ()
-playActions board actions = do
-  if length actions > 0 then do
-    showHand actions
-    putStrLn $ ("Which card do you want to play?")
-    response <- getLine
-    let card = findCardByName response actions
-    if isJust card then do
-      -- let board' = triggerCardEffect board card
-      let actions' = removeItem (fromJust card) actions
-      playActions board actions'
-    else putStrLn $ ("There are no actions you can play.")
+playActions :: Board -> IO ()
+playActions board = do
+  let player = (board ^. players)!!0
+  let hand = player ^. T.hand
+  let cards = getActions hand
+  if length cards > 0 then do
+    let uses = board ^. state ^. actions 
+    if uses > 0 then do
+      putStrLn $ "You have " ++ show uses ++ " action points left to use."
+      showHand cards
+      putStrLn $ "Which card do you want to play?"
+      response <- getLine
+      let card = findCardByName response cards
+      if isJust card then do
+        let hand' = removeItem (fromJust card) hand
+        let players' = replacePlayer player{_hand=hand'} (board ^. T.players)
+        board' <- playCard board{_players=players'} (fromJust card ^. effect)
+        playActions board'
+      else putStrLn $ "Couldn't find the card."
+    else putStrLn $ "You have no actions left to use."
   else
-    putStrLn $ ("There are no actions you can play.")
+    putStrLn $ "There are no action cards you can use."
   -- let effects = card ^. Cards.effect
   -- let states = map activateEffect effects
   -- sumStates states

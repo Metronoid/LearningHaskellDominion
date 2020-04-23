@@ -4,7 +4,7 @@ import Control.Lens
 
 data CardType = Treasure | Curse | Victory | Action deriving (Enum, Show, Eq, Ord)
 
-data CardEffect = EmptyEffect | CoinValue Int | VPValue Int | GainAction Int | CellarEffect deriving (Show, Eq, Ord)
+data CardEffect = EmptyEffect | CoinValue Int | VPValue Int | GainAction Int | DiscardCard | CellarEffect deriving (Show, Eq, Ord)
 
 data Card = Card {
   _cardName :: String, 
@@ -14,6 +14,12 @@ data Card = Card {
 }
 makeLenses ''Card
 
+instance Show Card where
+  show Card{..} = _cardName++" ("++show _cost++")"
+
+instance Eq Card where
+  x == y = x ^. cardName == y ^. cardName
+
 data Player = Player {
   _playerName :: String, 
   _deck :: [Card], 
@@ -21,6 +27,9 @@ data Player = Player {
   _hand :: [Card]
 }
 makeLenses ''Player
+
+replacePlayer :: Player -> [Player] -> [Player]
+replacePlayer y (x:xs) = [y] ++ xs
 
 data State = State {
   _money :: Int,
