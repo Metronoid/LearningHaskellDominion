@@ -4,7 +4,14 @@ import Control.Lens
 
 data CardType = Treasure | Curse | Victory | Action deriving (Enum, Show, Eq, Ord)
 
-data CardEffect = EmptyEffect | CoinValue Int | VPValue Int | GainAction Int | DiscardCard | CellarEffect deriving (Show, Eq, Ord)
+data CardEffect = 
+  EmptyEffect | 
+  CoinValue Int | 
+  VPValue Int | 
+  GainAction Int | 
+  GainBuy Int | 
+  DrawCards Int | 
+  CellarEffect deriving (Show, Eq, Ord)
 
 data Card = Card {
   _cardName :: String, 

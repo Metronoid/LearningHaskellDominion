@@ -40,17 +40,27 @@ drawCards player amm = do
   else do
     let discard' = player ^. discard
     let (hand, deck'') = splitFrom 0 (amm - length deck' - 1) (shuffleDeck discard')
-    player{_deck=deck'', _hand=deck' ++ hand, _discard = []}
+    player{_deck=deck'', _hand=player ^. T.hand ++ deck' ++ hand, _discard = []}
 
 activateCardEffect :: Board -> CardEffect -> IO (Board)
 activateCardEffect board (CoinValue x) = do
-  let state' = board ^. state
-  let money' = (state' ^. money) + x
-  return board{_state=state'{_money=money'}}
+  let state = board ^. T.state
+  let money = (state ^. T.money) + x
+  return board{_state=state{_money=money}}
 activateCardEffect board (GainAction x) = do
-  let state' = board ^. state
-  let actions' = (state' ^. actions) + x
-  return board{_state=state'{_actions=actions'}}
+  let state = board ^. T.state
+  let actions = (state ^. T.actions) + x
+  return board{_state=state{_actions=actions}}
+activateCardEffect board (GainBuy x) = do
+  let state = board ^. T.state
+  let buys = (state ^. T.buys) + x
+  return board{_state=state{_buys=buys}}
+activateCardEffect board (DrawCards x) = do
+  let player = drawCards ((board ^. T.players)!!0) x
+  putStrLn "Your new hand contains the following cards"
+  showHand $ player ^. T.hand
+  let players = replacePlayer player (board ^. T.players)
+  return board{_players=players}
 activateCardEffect board (CellarEffect) = do
   let player = (board ^. T.players)!!0
   let hand = player ^. T.hand

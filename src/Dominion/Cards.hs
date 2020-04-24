@@ -16,6 +16,7 @@ duchy = Card {_cardName = "Duchy", _cardType=Victory, _cost = 5, _effect = [VPVa
 province = Card {_cardName = "Province", _cardType=Victory, _cost = 8, _effect = [VPValue 6]}
 
 cellar = Card {_cardName="Cellar", _cardType=Action, _cost = 2, _effect=[CellarEffect]}
+market = Card {_cardName="Market", _cardType=Action, _cost = 5, _effect=[DrawCards 1, GainBuy 1, CoinValue 1]}
 
 findCardsByName :: String -> [Card] -> [Card]
 findCardsByName name' cards = filter (\x -> _cardName x == name') cards

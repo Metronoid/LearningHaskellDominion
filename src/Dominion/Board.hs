@@ -59,7 +59,8 @@ setup = do
               BuyableCard {_card= estate, _stock = 10},
               BuyableCard {_card= duchy, _stock = 10},
               BuyableCard {_card= province, _stock = 10},
-              BuyableCard {_card= cellar, _stock = 10}]
+              BuyableCard {_card= cellar, _stock = 10},
+              BuyableCard {_card= market, _stock = 10}]
 
   let blue' = setupPlayer blue
   let red' = setupPlayer red
@@ -74,13 +75,19 @@ nextTurn :: Board -> IO ()
 nextTurn board = do 
   putStrLn "-------------------------------"
 
-  let player = (board ^. players)!!0
-  let hand' = player ^. hand
-  putStrLn $ (player ^. T.playerName) ++ "'s turn."
-  showHand hand'
+  if checkGameEnding board then
+    displayGameResults (board ^. players)
+  else do
+    let player = (board ^. players)!!0
+    let hand' = player ^. hand
+    putStrLn $ (player ^. T.playerName) ++ "'s turn."
+    showHand hand'
 
-  board' <- playActions board{_state=baseState}
-  buyPhase board'
+    board' <- playActions board{_state=baseState}
+    let state = board' ^. T.state
+    let player' = (board' ^. T.players)!!0
+    putStrLn $ show $ state ^. T.money
+    buyPhase board'{_state=state{_money=(state ^. T.money + (getMoney $ player' ^. T.hand))}}
 
 playActions :: Board -> IO Board
 playActions board = do
@@ -92,6 +99,7 @@ playActions board = do
     if uses > 0 then do
       putStrLn $ "You have " ++ show uses ++ " action points left to use."
       showHand cards
+      showHand $ player ^. T.deck
       putStrLn $ "Which card do you want to play?"
       response <- getLine
       let card = findCardByName response cards
@@ -115,42 +123,38 @@ playActions board = do
 
 buyPhase :: Board -> IO ()
 buyPhase board = do
-  if checkGameEnding board then
-    displayGameResults (board ^. players)
-  else do
-    let player = (board ^. players)!!0
-    let state = board ^. T.state
-    let state' = state {_money=getMoney $ player ^. T.hand}
-    if (state' ^. buys > 0) then do
-      let buyList' = canBuy (board ^. buyList) (state' ^. T.money)
-      putStrLn ("You can buy: " ++ (intercalate ", " (map show buyList')))
-      putStrLn ("You have " ++ show (state' ^. money) ++ " money left")
-      putStrLn ("You have " ++ show (state' ^. buys) ++ " buy actions left")
-      putStrLn "What do you want to buy?"
-      buyRequest <- getLine
-      let boughtCard = buyCard buyRequest (board ^. buyList)
-      if (boughtCard ^. T.cardName) == "Empty" then do
-        putStrLn ("You decided not to use your buy.")
-        let player' = drawCards (discardHand player) 5
-        let players' = switchPlayer player' (board ^. players)
-        nextTurn board{_players=players'}
-      else do
-        putStrLn ("You have bought an " ++ (boughtCard ^. T.cardName))
-        let state'' = State {_money=(state' ^. money - (boughtCard ^. T.cost)), _actions=state' ^. actions, _buys = state' ^. buys-1}
-        let player' = player {_discard = ([boughtCard] ++ (player ^. discard))}
-        let players' = replacePlayer player' (board ^. players)
-
-        let elemCard = elemIndex boughtCard (map (^. card) (board ^. buyList))
-        if isNothing elemCard then
-          buyPhase board {_players=players', _state=state''}
-        else do
-          let buyList' = replaceNth (fromJust elemCard) (lowerStock((board ^. buyList)!!(fromJust elemCard))) (board ^. buyList)
-          buyPhase board {_players=players', _buyList = buyList', _state=state''}
-    else do
-      putStrLn ("You were not able to buy anything else.")
+  let player = (board ^. players)!!0
+  let state' = board ^. T.state
+  if (state' ^. buys > 0) then do
+    let buyList' = canBuy (board ^. buyList) (state' ^. T.money)
+    putStrLn ("You can buy: " ++ (intercalate ", " (map show buyList')))
+    putStrLn ("You have " ++ show (state' ^. money) ++ " money left")
+    putStrLn ("You have " ++ show (state' ^. buys) ++ " buy actions left")
+    putStrLn "What do you want to buy?"
+    buyRequest <- getLine
+    let boughtCard = buyCard buyRequest (board ^. buyList)
+    if (boughtCard ^. T.cardName) == "Empty" then do
+      putStrLn ("You decided not to use your buy.")
       let player' = drawCards (discardHand player) 5
       let players' = switchPlayer player' (board ^. players)
       nextTurn board{_players=players'}
+    else do
+      putStrLn ("You have bought an " ++ (boughtCard ^. T.cardName))
+      let state'' = state' {_money=(state' ^. money - (boughtCard ^. T.cost)), _buys = state' ^. buys-1}
+      let player' = player {_discard = ([boughtCard] ++ (player ^. discard))}
+      let players' = replacePlayer player' (board ^. players)
+
+      let elemCard = elemIndex boughtCard (map (^. card) (board ^. buyList))
+      if isNothing elemCard then
+        buyPhase board {_players=players', _state=state''}
+      else do
+        let buyList' = replaceNth (fromJust elemCard) (lowerStock((board ^. buyList)!!(fromJust elemCard))) (board ^. buyList)
+        buyPhase board {_players=players', _buyList = buyList', _state=state''}
+  else do
+    putStrLn ("You were not able to buy anything else.")
+    let player' = drawCards (discardHand player) 5
+    let players' = switchPlayer player' (board ^. players)
+    nextTurn board{_players=players'}
 
 displayGameResults :: [Player] -> IO()
 displayGameResults [] = putStrLn "Thanks for Playing Dominion with me"
