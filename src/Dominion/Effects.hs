@@ -55,6 +55,11 @@ activateCardEffect board (GainBuy x) = do
   let state = board ^. T.state
   let buys = (state ^. T.buys) + x
   return board{_state=state{_buys=buys}}
+activateCardEffect board (MerchantEffect) = do
+  let state = board ^. T.state
+  let merch = (state ^. T.merch) + 1
+  putStrLn "The next Silver your play is worth 1 more"
+  return board{_state=state{_merch=merch}}
 activateCardEffect board (DrawCards x) = do
   let player = drawCards ((board ^. T.players)!!0) x
   putStrLn "Your new hand contains the following cards"

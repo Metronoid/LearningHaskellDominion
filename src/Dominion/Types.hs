@@ -11,6 +11,7 @@ data CardEffect =
   GainAction Int | 
   GainBuy Int | 
   DrawCards Int | 
+  MerchantEffect |
   CellarEffect deriving (Show, Eq, Ord)
 
 data Card = Card {
@@ -41,9 +42,12 @@ replacePlayer y (x:xs) = [y] ++ xs
 data State = State {
   _money :: Int,
   _actions :: Int, 
-  _buys :: Int
+  _buys :: Int,
+  _merch :: Int
 } deriving (Show)
 makeLenses ''State
+
+baseState = State {_money = 0, _actions = 1, _buys = 1, _merch = 0}
 
 data BuyableCard = BuyableCard {
   _card :: Card,

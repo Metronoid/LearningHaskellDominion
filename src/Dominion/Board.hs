@@ -9,7 +9,6 @@ import Control.Lens
 
 import Dominion.Types
 import Dominion.Cards as Cards
-import Dominion.State as State
 import Dominion.Player as Player
 import Dominion.Effects as Effects
 import Dominion.Types as T
@@ -23,10 +22,17 @@ switchPlayer :: Player -> [Player] -> [Player]
 switchPlayer y (x:xs) = xs ++ [y]
 
 
-getMoney :: [Card] -> Int
-getMoney hand = do
+getMoney :: [Card] -> State -> Int
+getMoney hand state = do
   let money = map coinValue (concatMap T._effect hand)
-  sum money
+  if state ^. T.merch > 0 then do
+    let silver = findCardByName "Silver" hand
+    if isJust silver then
+      (state ^. T.merch) + (sum money)
+    else
+      sum money
+  else
+    sum money
   where
     coinValue (T.CoinValue x) = x
     coinValue _ = 0
@@ -60,7 +66,10 @@ setup = do
               BuyableCard {_card= duchy, _stock = 10},
               BuyableCard {_card= province, _stock = 10},
               BuyableCard {_card= cellar, _stock = 10},
-              BuyableCard {_card= market, _stock = 10}]
+              BuyableCard {_card= market, _stock = 10},
+              BuyableCard {_card= smithy, _stock = 10},
+              BuyableCard {_card= village, _stock = 10},
+              BuyableCard {_card= merchant, _stock = 10}]
 
   let blue' = setupPlayer blue
   let red' = setupPlayer red
@@ -87,7 +96,7 @@ nextTurn board = do
     let state = board' ^. T.state
     let player' = (board' ^. T.players)!!0
     putStrLn $ show $ state ^. T.money
-    buyPhase board'{_state=state{_money=(state ^. T.money + (getMoney $ player' ^. T.hand))}}
+    buyPhase board'{_state=state{_money=(state ^. T.money + (getMoney (player' ^. T.hand) state))}}
 
 playActions :: Board -> IO Board
 playActions board = do
@@ -117,9 +126,6 @@ playActions board = do
   else do
     putStrLn $ "There are no action cards you can use."
     return board
-  -- let effects = card ^. Cards.effect
-  -- let states = map activateEffect effects
-  -- sumStates states
 
 buyPhase :: Board -> IO ()
 buyPhase board = do
