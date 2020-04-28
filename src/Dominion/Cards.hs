@@ -1,10 +1,12 @@
 {-# LANGUAGE TemplateHaskell, RecordWildCards, DuplicateRecordFields, NamedFieldPuns #-}
 module Dominion.Cards where
 
+import Lib.Array
 import Control.Lens
 import Dominion.Types as T
 
 import Data.List
+import Data.Maybe
 
 copper = Card {_cardName = "Copper", _cardType=Treasure, _cost = 0, _effect = [CoinValue 1]}
 silver = Card {_cardName = "Silver", _cardType=Treasure, _cost = 3, _effect = [CoinValue 2]}
@@ -35,17 +37,22 @@ findBuyableCardsByName name' cards = filter (\x -> _cardName (x ^. card) == name
 
   -- where res = (name ++ " (" ++ (show cost) ++ ")")
 
-buyCard :: String -> [BuyableCard] -> Maybe Card
+buyCard :: String -> [BuyableCard] -> ([BuyableCard], Maybe Card)
 buyCard name cards = do 
   let filterCards = findBuyableCardsByName name cards
   if length filterCards > 0 then do
     let buyable = filterCards!!0
-    if buyable ^. stock > 0 then
-      Just $ buyable ^. card
+    if buyable ^. stock > 0 then do
+      let elemCard = elemIndex (buyable ^. T.card) (map (T._card) cards)
+      if isNothing elemCard then
+        (cards, Nothing)
+      else do
+        let buyList' = replaceNth (fromJust elemCard) (lowerStock(cards!!(fromJust elemCard))) cards
+        (buyList', Just $ buyable ^. card)
     else
-      Nothing
+      (cards, Nothing)
   else
-    Nothing
+    (cards, Nothing)
 
 isCardType :: CardType -> Card -> Bool
 isCardType cardType card = (card ^. T.cardType) == cardType

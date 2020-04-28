@@ -132,7 +132,7 @@ buyPhase board = do
     putStrLn ("You have " ++ show (state' ^. buys) ++ " buy actions left")
     putStrLn "What do you want to buy?"
     buyRequest <- getLine
-    let boughtCard = buyCard buyRequest (board ^. buyList)
+    let (buyList'', boughtCard) = buyCard buyRequest (board ^. buyList)
     if isJust boughtCard then do
       let card = fromJust boughtCard
       putStrLn ("You have bought an " ++ (card ^. T.cardName))
@@ -140,12 +140,7 @@ buyPhase board = do
       let player' = player {_discard = ([card] ++ (player ^. discard))}
       let players' = replacePlayer player' (board ^. players)
 
-      let elemCard = elemIndex card (map (T._card) (board ^. buyList))
-      if isNothing elemCard then
-        buyPhase board {_players=players', _state=state''}
-      else do
-        let buyList' = replaceNth (fromJust elemCard) (lowerStock((board ^. buyList)!!(fromJust elemCard))) (board ^. buyList)
-        buyPhase board {_players=players', _buyList = buyList', _state=state''}
+      buyPhase board {_players=players', _buyList = buyList'', _state=state''}
     else do
       putStrLn ("You decided not to use your buy.")
       let player' = drawCards (discardHand player) 5

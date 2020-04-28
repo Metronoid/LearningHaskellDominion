@@ -86,17 +86,20 @@ activateCardEffect board (MineEffect) = do
   let card = findCardByName response hand
   if isJust card then do
     let card' = fromJust card
-    let buyList = filter (\x -> isCardType T.Treasure (T._card x)) (board ^. T.buyList)
-    let buyList' = canBuy buyList $ (card' ^. T.cost) + 3
-    putStrLn ("You can gain: " ++ (intercalate ", " (map show buyList')))
+    let buyTreasure = filter (\x -> isCardType T.Treasure (T._card x)) (board ^. T.buyList)
+    let buyTreasure' = canBuy buyTreasure $ (card' ^. T.cost) + 3
+    putStrLn ("You can gain: " ++ (intercalate ", " (map show buyTreasure')))
     gain <- getLine
-    let gained = findCardByName gain (map T._card buyList')
-    if isJust gained then do
-      let hand' = (removeCard card' hand) ++ [(fromJust gained)]
-      let player' = player{_hand=hand'}
-      let players = replacePlayer player' (board ^. T.players)
-      showHand hand'
-      return board{_players=players}
+    let card = findCardByName gain (map (T._card) buyTreasure')
+    if isJust card then do
+      let (list, gained) = buyCard gain $ board ^. T.buyList
+      if isJust gained then do
+        let hand' = (removeCard card' hand) ++ [(fromJust gained)]
+        let player' = player{_hand=hand'}
+        let players = replacePlayer player' (board ^. T.players)
+        showHand hand'
+        return board{_players=players, _buyList=list}
+      else return board
     else return board
   else return board
 activateCardEffect board _ = return board
