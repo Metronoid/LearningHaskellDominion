@@ -6,7 +6,6 @@ import Dominion.Types as T
 
 import Data.List
 
-baseCard = Card {_cardName = "Empty", _cardType=Treasure, _cost = 0, _effect = [EmptyEffect]}
 copper = Card {_cardName = "Copper", _cardType=Treasure, _cost = 0, _effect = [CoinValue 1]}
 silver = Card {_cardName = "Silver", _cardType=Treasure, _cost = 3, _effect = [CoinValue 2]}
 gold = Card {_cardName = "Gold", _cardType=Treasure, _cost = 6, _effect = [CoinValue 3]}
@@ -20,6 +19,7 @@ market = Card {_cardName="Market", _cardType=Action, _cost = 5, _effect=[DrawCar
 smithy = Card {_cardName="Smithy", _cardType=Action, _cost = 4, _effect=[DrawCards 3, GainAction (-1)]}
 village = Card {_cardName="Village", _cardType=Action, _cost = 3, _effect=[DrawCards 1, GainAction 1]}
 merchant = Card {_cardName="Merchant", _cardType=Action, _cost = 3, _effect=[DrawCards 1, MerchantEffect]}
+mine = Card {_cardName="Mine", _cardType=Action, _cost = 5, _effect=[MineEffect, GainAction (-1)]}
 
 findCardsByName :: String -> [Card] -> [Card]
 findCardsByName name' cards = filter (\x -> _cardName x == name') cards
@@ -33,31 +33,30 @@ instance Show BuyableCard where
 findBuyableCardsByName :: String -> [BuyableCard] -> [BuyableCard]
 findBuyableCardsByName name' cards = filter (\x -> _cardName (x ^. card) == name') cards
 
-listBuy :: Int -> BuyableCard -> [BuyableCard]
-listBuy money buyable = do
-  if money >= (buyable ^. card ^. cost) && buyable ^. stock > 0 then [buyable] else []
   -- where res = (name ++ " (" ++ (show cost) ++ ")")
 
-buyCard :: String -> [BuyableCard] -> Card
+buyCard :: String -> [BuyableCard] -> Maybe Card
 buyCard name cards = do 
   let filterCards = findBuyableCardsByName name cards
   if length filterCards > 0 then do
     let buyable = filterCards!!0
     if buyable ^. stock > 0 then
-      buyable ^. card
-    else baseCard
-  else baseCard
+      Just $ buyable ^. card
+    else
+      Nothing
+  else
+    Nothing
 
-isAction :: Card -> Bool
-isAction card = (card ^. cardType) == Action
+isCardType :: CardType -> Card -> Bool
+isCardType cardType card = (card ^. T.cardType) == cardType
 
 lowerStock :: BuyableCard -> BuyableCard
 lowerStock card@BuyableCard{_stock} = card {_stock=_stock-1} 
 
-removeItem :: Card -> [Card] -> [Card]
-removeItem _ [] = []
-removeItem x (y:ys) | x == y = ys
-  | otherwise = y : removeItem x ys
+removeCard :: Card -> [Card] -> [Card]
+removeCard _ [] = []
+removeCard x (y:ys) | x == y = ys
+  | otherwise = y : removeCard x ys
 
 showHand :: [Card] -> IO ()
 showHand hand = do

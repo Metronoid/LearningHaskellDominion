@@ -11,16 +11,6 @@ askFirst = do
         "2" -> return $ Just False
         _ -> askFirst
 
-askTime = do
-  putStrLn "How many seconds would like to give the AI per turn? (Default: 10.0)"
-  response <- getLine
-  case response of
-      "" -> return 10.0
-      s -> case readMaybe s of
-          Just n -> return n
-          Nothing -> askTime
-
 main = do
   first <- askFirst
-  time <- askTime
   setup

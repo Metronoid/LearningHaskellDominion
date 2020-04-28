@@ -12,6 +12,7 @@ data CardEffect =
   GainBuy Int | 
   DrawCards Int | 
   MerchantEffect |
+  MineEffect |
   CellarEffect deriving (Show, Eq, Ord)
 
 data Card = Card {
@@ -54,6 +55,13 @@ data BuyableCard = BuyableCard {
   _stock :: Int
 }
 makeLenses ''BuyableCard
+
+canBuy :: [BuyableCard] -> Int -> [BuyableCard]
+canBuy cards money = concatMap (listBuy money) cards
+
+listBuy :: Int -> BuyableCard -> [BuyableCard]
+listBuy money buyable = do
+  if money >= (buyable ^. card ^. cost) && buyable ^. stock > 0 then [buyable] else []
 
 data Board = Board {
   _players :: [Player],

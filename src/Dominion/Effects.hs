@@ -3,6 +3,7 @@ module Dominion.Effects where
 import Dominion.Types as T
 import Dominion.Cards
 import Data.Maybe
+import Data.List
 import Control.Lens
 import Lib.Array
 import System.Random
@@ -22,7 +23,7 @@ discardCard player = do
     let card = findCardByName response hand
     if isJust card then do
       let card' = fromJust card
-      let hand' = removeItem card' hand
+      let hand' = removeCard card' hand
       discardCard player{_hand=hand', _discard=[card'] ++ (player ^. T.discard)}
     else return player
   else return player
@@ -75,4 +76,27 @@ activateCardEffect board (CellarEffect) = do
   putStrLn "Your new hand contains the following cards"
   showHand $ player'' ^. T.hand
   return board{_players=players}
+activateCardEffect board (MineEffect) = do
+  let player = (board ^. T.players)!!0
+  let hand = player ^. T.hand
+  let treasures = filter (isCardType T.Treasure) hand
+  putStrLn "Which Treasure from your hand do you want to trash?"
+  showHand treasures
+  response <- getLine
+  let card = findCardByName response hand
+  if isJust card then do
+    let card' = fromJust card
+    let buyList = filter (\x -> isCardType T.Treasure (T._card x)) (board ^. T.buyList)
+    let buyList' = canBuy buyList $ (card' ^. T.cost) + 3
+    putStrLn ("You can gain: " ++ (intercalate ", " (map show buyList')))
+    gain <- getLine
+    let gained = findCardByName gain (map T._card buyList')
+    if isJust gained then do
+      let hand' = (removeCard card' hand) ++ [(fromJust gained)]
+      let player' = player{_hand=hand'}
+      let players = replacePlayer player' (board ^. T.players)
+      showHand hand'
+      return board{_players=players}
+    else return board
+  else return board
 activateCardEffect board _ = return board
