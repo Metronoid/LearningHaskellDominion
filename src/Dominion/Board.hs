@@ -63,7 +63,8 @@ setup = do
               BuyableCard {_card= smithy, _stock = 10},
               BuyableCard {_card= village, _stock = 10},
               BuyableCard {_card= merchant, _stock = 10},
-              BuyableCard {_card= mine, _stock = 10}]
+              BuyableCard {_card= mine, _stock = 10},
+              BuyableCard {_card= remodel, _stock = 10}]
 
   let blue' = setupPlayer blue
   let red' = setupPlayer red

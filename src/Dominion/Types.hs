@@ -13,6 +13,7 @@ data CardEffect =
   DrawCards Int | 
   MerchantEffect |
   MineEffect |
+  RemodelEffect |
   CellarEffect deriving (Show, Eq, Ord)
 
 data Card = Card {

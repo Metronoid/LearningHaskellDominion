@@ -83,19 +83,41 @@ activateCardEffect board (MineEffect) = do
   putStrLn "Which Treasure from your hand do you want to trash?"
   showHand treasures
   response <- getLine
-  let card = findCardByName response hand
+  let card = findCardByName response treasures
   if isJust card then do
-    let card' = fromJust card
     let buyTreasure = filter (\x -> isCardType T.Treasure (T._card x)) (board ^. T.buyList)
-    let buyTreasure' = canBuy buyTreasure $ (card' ^. T.cost) + 3
+    let buyTreasure' = canBuy buyTreasure $ (fromJust card ^. T.cost) + 3
     putStrLn ("You can gain: " ++ (intercalate ", " (map show buyTreasure')))
     gain <- getLine
-    let card = findCardByName gain (map (T._card) buyTreasure')
-    if isJust card then do
+    let card' = findCardByName gain (map (T._card) buyTreasure')
+    if isJust card' then do
       let (list, gained) = buyCard gain $ board ^. T.buyList
       if isJust gained then do
-        let hand' = (removeCard card' hand) ++ [(fromJust gained)]
+        let hand' = (removeCard (fromJust card) hand) ++ [(fromJust gained)]
         let player' = player{_hand=hand'}
+        let players = replacePlayer player' (board ^. T.players)
+        showHand hand'
+        return board{_players=players, _buyList=list}
+      else return board
+    else return board
+  else return board
+activateCardEffect board (RemodelEffect) = do
+  let player = (board ^. T.players)!!0
+  let hand = player ^. T.hand
+  putStrLn "Which Card from your hand do you want to trash?"
+  showHand hand
+  response <- getLine
+  let card = findCardByName response hand
+  if isJust card then do
+    let buyList' = canBuy (board ^. T.buyList) $ (fromJust card ^. T.cost) + 2
+    putStrLn ("You can gain: " ++ (intercalate ", " (map show buyList')))
+    gain <- getLine
+    let card' = findCardByName gain (map (T._card) buyList')
+    if isJust card' then do
+      let (list, gained) = buyCard gain $ board ^. T.buyList
+      if isJust gained then do
+        let hand' = (removeCard (fromJust card) hand)
+        let player' = player{_hand=hand', _discard=[fromJust gained] ++ (player ^. T.discard)}
         let players = replacePlayer player' (board ^. T.players)
         showHand hand'
         return board{_players=players, _buyList=list}
