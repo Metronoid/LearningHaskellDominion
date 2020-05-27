@@ -50,21 +50,14 @@ setupPlayer :: Player -> Player
 setupPlayer player = do
   drawCards player {_deck = shuffleDeck (player ^. deck)} 5
 
+createBuyList :: [Card] -> [BuyableCard]
+createBuyList cards = do
+  map cardToBuyable cards
+  where cardToBuyable card = BuyableCard {_card=card, _stock = 10}
+
+
 setup = do
-  let buyList' = [  BuyableCard {_card= copper, _stock = 10}, 
-              BuyableCard {_card= silver, _stock = 10}, 
-              BuyableCard {_card= gold, _stock = 10},
-              BuyableCard {_card= curse, _stock = 10},
-              BuyableCard {_card= estate, _stock = 10},
-              BuyableCard {_card= duchy, _stock = 10},
-              BuyableCard {_card= province, _stock = 10},
-              BuyableCard {_card= cellar, _stock = 10},
-              BuyableCard {_card= market, _stock = 10},
-              BuyableCard {_card= smithy, _stock = 10},
-              BuyableCard {_card= village, _stock = 10},
-              BuyableCard {_card= merchant, _stock = 10},
-              BuyableCard {_card= mine, _stock = 10},
-              BuyableCard {_card= remodel, _stock = 10}]
+  let buyList' = createBuyList Cards.all
 
   let blue' = setupPlayer blue
   let red' = setupPlayer red
@@ -103,7 +96,6 @@ playActions board = do
     if uses > 0 then do
       putStrLn $ "You have " ++ show uses ++ " action points left to use."
       showHand cards
-      showHand $ player ^. T.deck
       putStrLn $ "Which card do you want to play?"
       response <- getLine
       let card = findCardByName response cards

@@ -8,21 +8,29 @@ import Dominion.Types as T
 import Data.List
 import Data.Maybe
 
-copper = Card {_cardName = "Copper", _cardType=Treasure, _cost = 0, _effect = [CoinValue 1]}
-silver = Card {_cardName = "Silver", _cardType=Treasure, _cost = 3, _effect = [CoinValue 2]}
-gold = Card {_cardName = "Gold", _cardType=Treasure, _cost = 6, _effect = [CoinValue 3]}
-curse = Card {_cardName = "Curse", _cardType=Curse, _cost = 0, _effect = [VPValue (-1)]}
-estate = Card {_cardName = "Estate", _cardType=Victory, _cost = 2, _effect = [VPValue 1]}
-duchy = Card {_cardName = "Duchy", _cardType=Victory, _cost = 5, _effect = [VPValue 3]}
-province = Card {_cardName = "Province", _cardType=Victory, _cost = 8, _effect = [VPValue 6]}
+copper   = Card {_cardName = "Copper",   _cardType=[Treasure], _cost = 0, _effect = [CoinValue 1]}
+silver   = Card {_cardName = "Silver",   _cardType=[Treasure], _cost = 3, _effect = [CoinValue 2]}
+gold     = Card {_cardName = "Gold",     _cardType=[Treasure], _cost = 6, _effect = [CoinValue 3]}
+curse    = Card {_cardName = "Curse",    _cardType=[Curse],    _cost = 0, _effect = [VPValue (-1)]}
+estate   = Card {_cardName = "Estate",   _cardType=[Victory],  _cost = 2, _effect = [VPValue 1]}
+duchy    = Card {_cardName = "Duchy",    _cardType=[Victory],  _cost = 5, _effect = [VPValue 3]}
+province = Card {_cardName = "Province", _cardType=[Victory],  _cost = 8, _effect = [VPValue 6]}
 
-cellar = Card {_cardName="Cellar", _cardType=Action, _cost = 2, _effect=[CellarEffect]}
-market = Card {_cardName="Market", _cardType=Action, _cost = 5, _effect=[DrawCards 1, GainBuy 1, CoinValue 1]}
-smithy = Card {_cardName="Smithy", _cardType=Action, _cost = 4, _effect=[DrawCards 3, GainAction (-1)]}
-village = Card {_cardName="Village", _cardType=Action, _cost = 3, _effect=[DrawCards 1, GainAction 1]}
-merchant = Card {_cardName="Merchant", _cardType=Action, _cost = 3, _effect=[DrawCards 1, MerchantEffect]}
-mine = Card {_cardName="Mine", _cardType=Action, _cost = 5, _effect=[MineEffect, GainAction (-1)]}
-remodel = Card {_cardName="Remodel", _cardType=Action, _cost = 4, _effect=[RemodelEffect, GainAction (-1)]}
+cellar   = Card {_cardName="Cellar",   _cardType=[Action], _cost = 2, _effect=[CellarEffect]}
+village  = Card {_cardName="Village",  _cardType=[Action], _cost = 3, _effect=[DrawCards 1, GainAction 1]}
+merchant = Card {_cardName="Merchant", _cardType=[Action], _cost = 3, _effect=[DrawCards 1, MerchantEffect]}
+workshop = Card {_cardName="Workshop", _cardType=[Action], _cost = 3, _effect=[WorkshopEffect, GainAction (-1)]}
+smithy   = Card {_cardName="Smithy",   _cardType=[Action], _cost = 4, _effect=[DrawCards 3, GainAction (-1)]}
+remodel  = Card {_cardName="Remodel",  _cardType=[Action], _cost = 4, _effect=[RemodelEffect, GainAction (-1)]}
+market   = Card {_cardName="Market",   _cardType=[Action], _cost = 5, _effect=[DrawCards 1, GainBuy 1, CoinValue 1]}
+mine     = Card {_cardName="Mine",     _cardType=[Action], _cost = 5, _effect=[MineEffect, GainAction (-1)]}
+
+moat    = Card {_cardName="Moat",    _cardType=[Action, Reaction], _cost = 2, _effect=[DrawCards 2, GainAction (-1)]}
+militia = Card {_cardName="Militia", _cardType=[Action, Attack],   _cost = 4, _effect=[CoinValue 2, MilitiaEffect, GainAction (-1)]}
+
+all = [copper, silver, gold, curse, estate, duchy, province, 
+        cellar, moat, village, merchant, workshop, 
+        smithy, remodel, militia, market, mine]
 
 findCardsByName :: String -> [Card] -> [Card]
 findCardsByName name' cards = filter (\x -> _cardName x == name') cards
@@ -56,7 +64,7 @@ buyCard name cards = do
     (cards, Nothing)
 
 isCardType :: CardType -> Card -> Bool
-isCardType cardType card = (card ^. T.cardType) == cardType
+isCardType cardType card = elem cardType (card ^. T.cardType)
 
 lowerStock :: BuyableCard -> BuyableCard
 lowerStock card@BuyableCard{_stock} = card {_stock=_stock-1} 

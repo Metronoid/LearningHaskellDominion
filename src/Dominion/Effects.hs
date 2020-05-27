@@ -13,19 +13,31 @@ gen = mkStdGen 123
 shuffleDeck :: [Card] -> [Card]
 shuffleDeck deck = shuffle' deck gen
 
-discardCard :: Player -> IO Player
-discardCard player = do
+discardCard :: Bool -> Bool -> Int -> Player -> IO Player
+discardCard choice blocked amm player = do
   let hand = player ^. T.hand
   if length hand > 0 then do
-    showHand hand
-    putStrLn "Which card do you want to discard?"
-    response <- getLine
-    let card = findCardByName response hand
-    if isJust card then do
-      let card' = fromJust card
-      let hand' = removeCard card' hand
-      discardCard player{_hand=hand', _discard=[card'] ++ (player ^. T.discard)}
-    else return player
+    if not ((hasReaction hand) && blocked) then do
+      putStrLn $ (player ^. T.playerName) ++ ": You have to discard a card"
+      showHand hand
+      putStrLn "Which card do you want to discard?"
+      response <- getLine
+      let card = findCardByName response hand
+      if isJust card then do
+        let card' = fromJust card
+        let hand' = removeCard card' hand
+        let player' = player{_hand=hand', _discard=[card'] ++ (player ^. T.discard)}
+        if amm > 1 then
+          discardCard choice blocked (amm-1) player'
+        else
+          return player'
+      else if choice then
+        return player
+      else
+        discardCard choice blocked amm player
+    else do
+      putStrLn $ (player ^. T.playerName) ++ ": You were targeted to discard a card but it was blocked."
+      return player
   else return player
 
 discardHand :: Player -> Player
@@ -42,6 +54,10 @@ drawCards player amm = do
     let discard' = player ^. discard
     let (hand, deck'') = splitFrom 0 (amm - length deck' - 1) (shuffleDeck discard')
     player{_deck=deck'', _hand=player ^. T.hand ++ deck' ++ hand, _discard = []}
+
+hasReaction :: [Card] -> Bool
+hasReaction hand = do
+  elem True $ map (isCardType T.Reaction) hand
 
 activateCardEffect :: Board -> CardEffect -> IO (Board)
 activateCardEffect board (CoinValue x) = do
@@ -70,7 +86,7 @@ activateCardEffect board (DrawCards x) = do
 activateCardEffect board (CellarEffect) = do
   let player = (board ^. T.players)!!0
   let hand = player ^. T.hand
-  player' <- discardCard player
+  player' <- discardCard True False (length hand) player
   let player'' = drawCards player' (length hand - (length $ player' ^. T.hand))
   let players = replacePlayer player'' (board ^. T.players)
   putStrLn "Your new hand contains the following cards"
@@ -124,4 +140,23 @@ activateCardEffect board (RemodelEffect) = do
       else return board
     else return board
   else return board
-activateCardEffect board _ = return board
+activateCardEffect board (WorkshopEffect) = do
+  let player = (board ^. T.players)!!0
+  let hand = player ^. T.hand
+  let buyList' = canBuy (board ^. T.buyList) 4
+  putStrLn ("You can gain: " ++ (intercalate ", " (map show buyList')))
+  gain <- getLine
+  let card' = findCardByName gain (map (T._card) buyList')
+  if isJust card' then do
+    let (list, gained) = buyCard gain $ board ^. T.buyList
+    if isJust gained then do
+      let player' = player{_discard=[fromJust gained] ++ (player ^. T.discard)}
+      let players = replacePlayer player' (board ^. T.players)
+      return board{_players=players, _buyList=list}
+    else return board
+  else return board
+activateCardEffect board (militiaEffect) = do
+  let player = (board ^. T.players)!!0
+  let targets = drop 1 (board ^. T.players)
+  targets' <- mapM (discardCard False True 3) targets
+  return board{_players=[player] ++ targets'}

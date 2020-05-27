@@ -2,7 +2,7 @@
 module Dominion.Types where
 import Control.Lens
 
-data CardType = Treasure | Curse | Victory | Action deriving (Enum, Show, Eq, Ord)
+data CardType = Treasure | Curse | Victory | Action | Attack | Reaction deriving (Enum, Show, Eq, Ord)
 
 data CardEffect = 
   EmptyEffect | 
@@ -14,11 +14,13 @@ data CardEffect =
   MerchantEffect |
   MineEffect |
   RemodelEffect |
+  WorkshopEffect |
+  MilitiaEffect |
   CellarEffect deriving (Show, Eq, Ord)
 
 data Card = Card {
   _cardName :: String, 
-  _cardType :: CardType,
+  _cardType :: [CardType],
   _cost :: Int, 
   _effect :: [CardEffect]
 }
